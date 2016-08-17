@@ -3,11 +3,22 @@
 #include "linenoise.h"
 #include "mpc.h"
 
+long power(long x, long y) {
+    if (y == 0) { return 1; }
+    long r = x;
+    for (int i = 2; i <= y; i++) {
+        r = r * x;
+    }
+    return r;
+}
+
 long eval_op(long x, char* op, long y) {
     if (strcmp(op, "+") == 0) { return x + y; }
     if (strcmp(op, "-") == 0) { return x - y; }
     if (strcmp(op, "*") == 0) { return x * y; }
     if (strcmp(op, "/") == 0) { return x / y; }
+    if (strcmp(op, "%") == 0) { return x % y; }
+    if (strcmp(op, "^") == 0) { return power(x, y); }
     return 0;
 }
 
@@ -27,6 +38,11 @@ long eval(mpc_ast_t* tree) {
 
     // eval the first operand
     long x = eval(tree->children[2]);
+
+    // check if - is a unary operator
+    if (tree->children_num == 4 && (strcmp(op, "-") == 0)) {
+        return -1 * x;
+    }
 
     // and use that too evaluate the other children
     int i = 3;
@@ -48,7 +64,7 @@ int main() {
     mpca_lang(MPCA_LANG_DEFAULT,
     "                                                       \
         number   : /-?[0-9]+/ ;                             \
-        operator : '+' | '-' | '*' | '/' ;                  \
+        operator : '+' | '-' | '*' | '/' | '%' | '^' ;       \
         expr     : <number> | '(' <operator> <expr>+ ')' ;  \
         program  : /^/ <expr> /$/ ;                         \
     ",
@@ -76,7 +92,6 @@ int main() {
             // parse input
             if (mpc_parse("<stdin>", line, Program, &r)) {
                 // print AST
-                //mpc_ast_print(r.output);
                 printf("%ld\n", eval(r.output));
                 mpc_ast_delete(r.output);
             } else {
