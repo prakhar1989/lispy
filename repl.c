@@ -3,6 +3,52 @@
 #include "linenoise.h"
 #include "mpc.h"
 
+// lisp value
+typedef struct {
+    int type;
+    long num;
+    int err;
+} lval;
+
+// lisp val types
+enum { LVAL_NUM, LVAL_ERR };
+
+// lisp val error types
+enum { LERR_DIV_ZERO, LERR_BAD_OP, LERR_BAD_NUM };
+
+// create new number type lisp value
+lval lval_num(long x) {
+    lval v;
+    v.type = LVAL_NUM;
+    v.num = x;
+    return v;
+}
+
+// create new number type lisp value
+lval lval_err(int x) {
+    lval v;
+    v.type = LVAL_ERR;
+    v.err = x;
+    return v;
+}
+
+// pretty printing lisp values
+void lval_print(lval v) {
+    switch (v.type) {
+        case LVAL_NUM: printf("%li", v.num); break;
+        case LVAL_ERR:
+            switch (v.err) {
+                case LERR_DIV_ZERO: printf("Error: Division by zero!"); break;
+                case LERR_BAD_OP: printf("Error: Invalid Operator!"); break;
+                case LERR_BAD_NUM: printf("Error: Invalid Number!"); break;
+            }
+        break;
+    }
+}
+
+// wrapper for printing with a newline
+void lval_println(lval v) { lval_print(v); putchar('\n'); }
+
 long power(long x, long y) {
     if (y == 0) { return 1; }
     long r = x;
@@ -12,17 +58,25 @@ long power(long x, long y) {
     return r;
 }
 
-long eval_op(long x, char* op, long y) {
-    if (strcmp(op, "+") == 0) { return x + y; }
-    if (strcmp(op, "-") == 0) { return x - y; }
-    if (strcmp(op, "*") == 0) { return x * y; }
-    if (strcmp(op, "/") == 0) { return x / y; }
-    if (strcmp(op, "%") == 0) { return x % y; }
-    if (strcmp(op, "^") == 0) { return power(x, y); }
-    return 0;
+lval eval_op(lval x, char* op, lval y) {
+    if (x.type == LVAL_ERR) { return x; }
+    if (y.type == LVAL_ERR) { return y; }
+
+    if (strcmp(op, "+") == 0) { return lval_num(x.num + y.num); }
+    if (strcmp(op, "-") == 0) { return lval_num(x.num - y.num); }
+    if (strcmp(op, "*") == 0) { return lval_num(x.num * y.num); }
+    if (strcmp(op, "/") == 0) {
+        if (y.num == 0) {
+            return lval_err(LERR_DIV_ZERO);
+        }
+        return lval_num(x.num / y.num);
+    }
+    if (strcmp(op, "%") == 0) { return lval_num(x.num % y.num); }
+    if (strcmp(op, "^") == 0) { return lval_num(power(x.num, y.num)); }
+    return lval_err(LERR_BAD_OP);
 }
 
-long eval(mpc_ast_t* tree) {
+lval eval(mpc_ast_t* tree) {
     // if not an expression node
     if (!strstr(tree->tag, "expr")) {
         return eval(tree->children[1]);
@@ -30,18 +84,21 @@ long eval(mpc_ast_t* tree) {
 
     // if the tag has the string `number`
     if (strstr(tree->tag, "number")) {
-        return atoi(tree->contents);
+        // checking if long conversion works or not
+        errno = 0;
+        long x = strtol(tree->contents, NULL, 10);
+        return errno != ERANGE ? lval_num(x) : lval_err(LERR_BAD_NUM);
     }
 
     // since '(' is first, operator is the second child
     char *op = tree->children[1]->contents;
 
     // eval the first operand
-    long x = eval(tree->children[2]);
+    lval x = eval(tree->children[2]);
 
     // check if - is a unary operator
     if (tree->children_num == 4 && (strcmp(op, "-") == 0)) {
-        return -1 * x;
+        return lval_num(-1 * x.num);
     }
 
     // and use that too evaluate the other children
@@ -91,8 +148,7 @@ int main() {
 
             // parse input
             if (mpc_parse("<stdin>", line, Program, &r)) {
-                // print AST
-                printf("%ld\n", eval(r.output));
+                lval_println(eval(r.output));
                 mpc_ast_delete(r.output);
             } else {
                 // print the error
