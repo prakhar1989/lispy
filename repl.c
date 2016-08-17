@@ -3,6 +3,40 @@
 #include "linenoise.h"
 #include "mpc.h"
 
+long eval_op(long x, char* op, long y) {
+    if (strcmp(op, "+") == 0) { return x + y; }
+    if (strcmp(op, "-") == 0) { return x - y; }
+    if (strcmp(op, "*") == 0) { return x * y; }
+    if (strcmp(op, "/") == 0) { return x / y; }
+    return 0;
+}
+
+long eval(mpc_ast_t* tree) {
+    // if not an expression node
+    if (!strstr(tree->tag, "expr")) {
+        return eval(tree->children[1]);
+    }
+
+    // if the tag has the string `number`
+    if (strstr(tree->tag, "number")) {
+        return atoi(tree->contents);
+    }
+
+    // since '(' is first, operator is the second child
+    char *op = tree->children[1]->contents;
+
+    // eval the first operand
+    long x = eval(tree->children[2]);
+
+    // and use that too evaluate the other children
+    int i = 3;
+    while (strstr(tree->children[i]->tag, "expr")) {
+        x = eval_op(x, op, eval(tree->children[i]));
+        i++;
+    }
+    return x;
+}
+
 int main() {
     // parsers
     mpc_parser_t* Number = mpc_new("number");
@@ -16,7 +50,7 @@ int main() {
         number   : /-?[0-9]+/ ;                             \
         operator : '+' | '-' | '*' | '/' ;                  \
         expr     : <number> | '(' <operator> <expr>+ ')' ;  \
-        program  : /^/ '(' <operator> <expr>+ ')' /$/ ;     \
+        program  : /^/ <expr> /$/ ;                         \
     ",
     Number, Operator, Expr, Program);
 
@@ -42,7 +76,8 @@ int main() {
             // parse input
             if (mpc_parse("<stdin>", line, Program, &r)) {
                 // print AST
-                mpc_ast_print(r.output);
+                //mpc_ast_print(r.output);
+                printf("%ld\n", eval(r.output));
                 mpc_ast_delete(r.output);
             } else {
                 // print the error
