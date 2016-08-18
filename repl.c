@@ -41,7 +41,7 @@ lval* lval_err(char* m) {
 
 // construct a pointer to a sym type lisp value
 lval* lval_sym(char* s) {
-    lval* v = malloc(sizeof(s));
+    lval* v = malloc(sizeof(lval));
     v->type = LVAL_SYM;
     v->sym = malloc(strlen(s) + 1);
     strcpy(v->sym, s);
@@ -192,7 +192,6 @@ int main() {
 
             // parse input
             if (mpc_parse("<stdin>", line, Program, &r)) {
-                mpc_ast_print(r.output);
                 lval* x = lval_read(r.output);
                 lval_println(x);
                 lval_del(x);
