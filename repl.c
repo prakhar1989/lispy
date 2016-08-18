@@ -20,7 +20,7 @@ typedef struct lval {
 } lval;
 
 // lisp val types
-enum { LVAL_NUM, LVAL_ERR, LVAL_SYM, LVAL_SEXPR };
+enum { LVAL_ERR, LVAL_NUM, LVAL_SYM, LVAL_SEXPR };
 
 // construct a pointer to a new number type lisp value
 lval* lval_num(long x) {
@@ -192,6 +192,7 @@ int main() {
 
             // parse input
             if (mpc_parse("<stdin>", line, Program, &r)) {
+                mpc_ast_print(r.output);
                 lval* x = lval_read(r.output);
                 lval_println(x);
                 lval_del(x);
