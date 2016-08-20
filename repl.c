@@ -190,6 +190,7 @@ lval* builtin_op(lval* a, char* op) {
         if (strcmp(op, "+") == 0) { x->num += y->num; }
         if (strcmp(op, "-") == 0) { x->num -= y->num; }
         if (strcmp(op, "*") == 0) { x->num *= y->num; }
+        if (strcmp(op, "%") == 0) { x->num %= y->num; }
         if (strcmp(op, "/") == 0) { 
             if (y->num == 0) {
                 lval_del(x);
@@ -273,12 +274,12 @@ int main() {
 
     // defining the grammar
     mpca_lang(MPCA_LANG_DEFAULT,
-    "                                                       \
-        number   : /-?[0-9]+/ ;                             \
-        symbol   : '+' | '-' | '*' | '/' | '%' | '^' ;      \
-        sexpr    : '(' <expr>* ')';                         \
-        expr     : <number> | <symbol> | <sexpr> ;          \
-        program  : /^/ <expr>* /$/ ;                        \
+    "                                                        \
+        number   : /-?[0-9]+.[0-9]+/ ;                              \
+        symbol   : '+' | '-' | '*' | '/' | '%' | '^' | '%';  \
+        sexpr    : '(' <expr>* ')';                          \
+        expr     : <number> | <symbol> | <sexpr> ;           \
+        program  : /^/ <expr>* /$/ ;                         \
     ",
     Number, Symbol, Sexpr, Expr, Program);
 
